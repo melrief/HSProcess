@@ -1,0 +1,273 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+    <title>Hsprocess by melrief</title>
+
+    <link rel="stylesheet" href="stylesheets/styles.css">
+    <link rel="stylesheet" href="stylesheets/pygment_trac.css">
+    <script src="javascripts/scale.fix.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+    <!--[if lt IE 9]>
+    <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+  </head>
+  <body>
+    <div class="wrapper">
+      <header>
+        <h1 class="header">Hsprocess</h1>
+        <p class="header">Haskell Stream Processor for the command line</p>
+
+        <ul>
+          <li class="download"><a class="buttons" href="https://github.com/melrief/HSProcess/zipball/master">Download ZIP</a></li>
+          <li class="download"><a class="buttons" href="https://github.com/melrief/HSProcess/tarball/master">Download TAR</a></li>
+          <li><a class="buttons github" href="https://github.com/melrief/HSProcess">View On GitHub</a></li>
+        </ul>
+
+        <p class="header">This project is maintained by <a class="header name" href="https://github.com/melrief">melrief</a></p>
+
+
+      </header>
+      <section>
+        <h1>
+<a name="haskell-stream-processor" class="anchor" href="#haskell-stream-processor"><span class="octicon octicon-link"></span></a>Haskell Stream Processor</h1>
+
+<p>Haskell Stream Processor is a command line utility to process streams
+using <a href="http://www.haskell.org">Haskell</a> code.</p>
+
+<p>There are many reasons why Haskell is suitable for stream processing from the
+command line.  Code written in Haskell is concise thanks to a clean syntax and
+the type inference which allows code without type decoration. Also it is very
+easy to define one-line transformations by combining functions.</p>
+
+<p>For example:</p>
+
+<div class="highlight"><pre>hsp <span class="s2">"L.map (L.head . words) . lines"</span>
+</pre></div>
+
+<p>prints the first word of each line of the input stream.</p>
+
+<h2>
+<a name="installation" class="anchor" href="#installation"><span class="octicon octicon-link"></span></a>Installation</h2>
+
+<p>From the project directory</p>
+
+<div class="highlight"><pre>cabal install
+</pre></div>
+
+<p>This will compile and install the executable <code>hsp</code> and the library
+<code>HSProcess.Representable</code>.</p>
+
+<h2>
+<a name="usage" class="anchor" href="#usage"><span class="octicon octicon-link"></span></a>Usage</h2>
+
+<p><code>hsp</code> supports different modes:</p>
+
+<h3>
+<a name="evaluate-an-expression" class="anchor" href="#evaluate-an-expression"><span class="octicon octicon-link"></span></a>Evaluate an expression</h3>
+
+<p>It is possible to use <code>hsp</code> to evaluate a user expression without
+input using the option <code>-e</code>:</p>
+
+<div class="highlight"><pre>hsp -e <span class="s2">"1"</span>
+</pre></div>
+
+<h3>
+<a name="work-on-the-stream" class="anchor" href="#work-on-the-stream"><span class="octicon octicon-link"></span></a>Work on the stream</h3>
+
+<p>The standard mode of <code>hsp</code> process the whole stream. It accepts a
+string representing a transformation from the stream, that has type
+<code>Data.ByteString.Lazy.ByteString</code>, to some value with type that is an
+instance of <code>Rows</code>:</p>
+
+<div class="highlight"><pre><span class="kt">ByteString</span> <span class="ow">-&gt;</span> <span class="kt">Rows</span> <span class="n">a</span>
+</pre></div>
+
+<p><code>Rows</code> is a special case of <code>Show</code> for representing data on the
+command line . For example, to print on stdout what it gets from stdin:</p>
+
+<div class="highlight"><pre>hsp <span class="s2">"id"</span>
+</pre></div>
+
+<h3>
+<a name="split-stream-in-chunks-and-process-them" class="anchor" href="#split-stream-in-chunks-and-process-them"><span class="octicon octicon-link"></span></a>Split stream in chunks and process them</h3>
+
+<p>Many times, stream processing is about splitting the stream on some delimiter,
+like <code>'\n'</code>, and process each chunk of data. With the standard mode of
+<code>hsp</code> this can be achieved using the <code>split</code> function of <code>ByteString</code>:</p>
+
+<div class="highlight"><pre>hsp <span class="s2">"L.filter (not . null) . split '\n'"</span>
+</pre></div>
+
+<p>This happens so often that <code>hsp</code> has a mode to split automatically the
+stream on a delimiter using <code>-d [&lt;delimiter&gt;]</code>.  If
+<code>&lt;delimiter&gt;</code> is omitted, then it is set to <code>\n</code>. With <code>-d</code>, the
+function provided must have type:</p>
+
+<div class="highlight"><pre><span class="p">[</span><span class="kt">ByteString</span><span class="p">]</span> <span class="ow">-&gt;</span> <span class="kt">Rows</span> <span class="n">a</span>
+</pre></div>
+
+<p>The command before can be rewritten as:</p>
+
+<div class="highlight"><pre>hsp -d <span class="s2">"L.filter (not . null)"</span>
+</pre></div>
+
+<h3>
+<a name="map-a-function-on-each-chunk-of-data" class="anchor" href="#map-a-function-on-each-chunk-of-data"><span class="octicon octicon-link"></span></a>Map a function on each chunk of data</h3>
+
+<p>A specific case of <code>hsp -d &lt;delimiter&gt;</code> is <code>hsp -d &lt;delimiter&gt; -m</code> that
+is equivalent of mapping the supplied function to the input list. In this case
+the function must have type:</p>
+
+<div class="highlight"><pre><span class="kt">ByteString</span> <span class="ow">-&gt;</span> <span class="kt">Row</span> <span class="n">a</span>
+</pre></div>
+
+<p>For example, to take the first word of each line:</p>
+
+<div class="highlight"><pre>hsp -m <span class="s2">"L.head . words"</span>
+</pre></div>
+
+<p>When <code>-m</code> is specified, <code>-d</code> can be omitted and the delimiter is
+automatically set to <code>\n</code>.</p>
+
+<h2>
+<a name="configuration" class="anchor" href="#configuration"><span class="octicon octicon-link"></span></a>Configuration</h2>
+
+<p>Haskell Stream Processor is a command line utility and for this reason it needs
+informations, like which modules should be loaded, that cannot be easily passed
+as arguments. There are two configuration files located under
+<code>$HOME/.hsp</code>,  one to import modules and one to import user defined
+functions.</p>
+
+<h3>
+<a name="modules" class="anchor" href="#modules"><span class="octicon octicon-link"></span></a>Modules</h3>
+
+<p>Haskell Stream Processor reads a list of modules to load from the file
+<code>$HOME/.hsp/modules</code>. Each line of this file is composed by the name of a
+module eventually followed by a space and it's qualified name. An example could
+be:</p>
+
+<div class="highlight"><pre>Control.Monad
+Data.List L
+</pre></div>
+
+<p>which means that all the functions from <code>Control.Monad</code> and <code>Data.List</code>
+will be available to the user, but for <code>Data.List</code> functions you must
+qualify them with <code>L.</code>.</p>
+
+<p>There are some modules that are loaded automatically without qualification. In particular,
+the module <code>Data.ByteString.Lazy.Char8</code> is automatically loaded
+because <code>hsp</code> works on lazy bytestrings. This means functions like that
+in <code>Prelude</code> work on list, like <code>map</code>, in <code>hsp</code> work on
+<code>ByteStrings</code>. Same for function that work on <code>String</code>.</p>
+
+<p>Note that <code>Prelude</code> is loaded with the qualified name <code>P</code>, so its
+functions are not directly visible.</p>
+
+<p>An example of module file can be found <a href="https://github.com/melrief/HSProcess/blob/master/examples/modules/modules">in the example directory</a>.</p>
+
+<h3>
+<a name="user-defined-functions" class="anchor" href="#user-defined-functions"><span class="octicon octicon-link"></span></a>User defined functions</h3>
+
+<p>It is possible to define new function to be used in Haskell Stream Processor
+inside the file <code>$HOME/.hsp/toolkit.hs</code>.</p>
+
+<p>An example of toolkit can be found <a href="https://github.com/melrief/HSProcess/blob/master/examples/toolkit/toolkit.hs">in the example directory</a>.</p>
+
+<h2>
+<a name="differences-with-the-glasgow-haskell-compiler" class="anchor" href="#differences-with-the-glasgow-haskell-compiler"><span class="octicon octicon-link"></span></a>Differences with the Glasgow Haskell Compiler</h2>
+
+<p>It is already possible to evaluate an function using the
+<a href="http://www.haskell.org/ghc/">Glasgow Haskell Compiler</a> using the option
+<code>-e</code> and by passing the custom function to <code>interact</code>:</p>
+
+<div class="highlight"><pre>ghc -e <span class="s2">"interact id"</span>
+</pre></div>
+
+<p>The main differences are that Haskell Stream Processor works on (lazy)
+<code>ByteString</code> instead of the slower <code>String</code>, it can load modules
+automatically from the <code>module</code> file and can load user defined functions
+from the <code>toolkit.hs</code> file. Also, Haskell Stream Processor supports
+different modes from working on the entire stream, like working on each line.</p>
+
+<h2>
+<a name="examples" class="anchor" href="#examples"><span class="octicon octicon-link"></span></a>Examples</h2>
+
+<p>In all the examples, <code>Data.ByteString</code> is loaded without qualification
+whereas <code>Data.List</code> is qualified as <code>L</code>. The function <code>match</code> is an
+alias for <code>Text.Regex.Posix.=~</code>.</p>
+
+<p>Evaluate <code>2^100</code>:</p>
+
+<div class="highlight"><pre>hsp -e <span class="s2">"2^100"</span>
+</pre></div>
+
+<p>Print numbers from 1 to 100:</p>
+
+<div class="highlight"><pre>hsp -e <span class="s2">"[1 .. 100]"</span>
+</pre></div>
+
+<p>Take the first line of a stream:</p>
+
+<div class="highlight"><pre>... | hsp -d <span class="s2">"L.take 1"</span>
+</pre></div>
+
+<p>Take the last two lines of a stream:</p>
+
+<div class="highlight"><pre>... | hsp -d <span class="s2">"L.reverse . L.take 2 . L.reverse"</span>
+</pre></div>
+
+<p>Print the 10th element of each line:</p>
+
+<div class="highlight"><pre>... | hsp -m <span class="s2">"(L.!! 10) . words"</span>
+</pre></div>
+
+<p>Print the elements from the 2nd to the 20th of each line:</p>
+
+<div class="highlight"><pre>... | hsp -m <span class="s2">"L.take 20 . L.drop 1 . words"</span>
+</pre></div>
+
+<p>Get the number of words:</p>
+
+<div class="highlight"><pre>... | hsp -d <span class="s2">"L.length . L.concatMap words"</span>
+</pre></div>
+
+<p>Get the number of lines:</p>
+
+<div class="highlight"><pre>... | hsp -d <span class="s2">"L.length"</span>
+</pre></div>
+
+<p>Sort integers and remove duplicates:</p>
+
+<div class="highlight"><pre>... | hsp -d <span class="s2">"L.nub . L.sort . L.map asInt"</span>
+</pre></div>
+
+<p>Sum the 2nd elements of every line:</p>
+
+<div class="highlight"><pre>... | hsp -d <span class="s2">"P.sum . L.map (asFloat . (L.!! 1) . words)"</span>
+</pre></div>
+
+<p>Split each line on a delimiter ':' and print the second element:</p>
+
+<div class="highlight"><pre>... | hsp -m <span class="s2">"(L.!! 1) . split ':'"</span>
+</pre></div>
+
+<p>Remove empty lines:</p>
+
+<div class="highlight"><pre>... | hsp -d <span class="s2">"L.filter (not . null)"</span>
+</pre></div>
+
+<p>Filter lines that match a pattern:</p>
+
+<div class="highlight"><pre>... | hsp -d <span class="s2">"L.filter (`match` "</span>t<span class="se">\\</span>w<span class="se">\\</span>wt<span class="s2">")"</span>
+</pre></div>
+      </section>
+      <footer>
+        <p><small>Hosted on <a href="https://pages.github.com">GitHub Pages</a> using the Dinky theme</small></p>
+      </footer>
+    </div>
+    <!--[if !IE]><script>fixScale(document);</script><![endif]-->
+		
+  </body>
+</html>
